@@ -46,7 +46,7 @@ jobs:
         UPDATED_DATE=$(date -u +"%d %b %Y")
         
         # Create header
-        cat <<EOF > combined_domains.txt
+        cat <<EOF > nrd-7.txt
         # Title: NRD-7days
         # Description: Newly registered domains over the past 7 days
         # Author: chrisjbawden
@@ -59,7 +59,7 @@ jobs:
         EOF
         
         # Append domain list
-        cat combined_raw.txt >> combined_domains.txt
+        cat combined_raw.txt >> nrd-7.txt
 
     - name: Commit and push updated file
       run: |
