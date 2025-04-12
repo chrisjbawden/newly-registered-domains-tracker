@@ -38,8 +38,28 @@ jobs:
         done
 
         echo "Combining all .txt files..."
-        cat whois_data/*.txt > whois_data/nrd-7.txt
-        mv whois_data/nrd-7.txt nrd-7.txt
+        # Combine all .txt files
+        cat whois_data/*.txt > combined_raw.txt
+        
+        # Count domains (lines)
+        DOMAIN_COUNT=$(wc -l < combined_raw.txt)
+        UPDATED_DATE=$(date -u +"%d %b %Y")
+        
+        # Create header
+        cat <<EOF > combined_domains.txt
+        # Title: NRD-7days
+        # Description: Newly registered domains over the past 7 days
+        # Author: chrisjbawden
+        
+        # @ GitHub : https://github.com/chrisjbawden/newly-registered-domains
+        # Updated: $UPDATED_DATE
+        # Domain Count: $DOMAIN_COUNT
+        #===============================================================
+        
+        EOF
+        
+        # Append domain list
+        cat combined_raw.txt >> combined_domains.txt
 
     - name: Commit and push updated file
       run: |
