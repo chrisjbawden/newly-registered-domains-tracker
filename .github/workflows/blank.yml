@@ -1,0 +1,50 @@
+name: Fetch and Commit WHOISDS NRD Data
+
+on:
+  schedule:
+    - cron: '0 17 * * *'  # 5:00 PM UTC = 4:00 AM AEST (during DST)
+  workflow_dispatch:  # manual trigger still available
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+      with:
+        persist-credentials: true  # required for committing
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y unzip curl
+
+    - name: Download and combine WHOISDS data
+      run: |
+        mkdir -p whois_data
+        TODAY=$(date -u +%Y-%m-%d)
+
+        for i in {0..6}; do
+          DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
+          ZIP_NAME="$DATE.zip"
+          ENCODED=$(echo -n "$ZIP_NAME" | base64)
+          URL="https://www.whoisds.com/whois-database/newly-registered-domains/${ENCODED}/nrd"
+          
+          echo "Downloading $URL"
+          curl -fL "$URL" -o "whois_data/$ZIP_NAME" || echo "Failed to download $ZIP_NAME"
+
+          if [ -f "whois_data/$ZIP_NAME" ]; then
+            unzip -o "whois_data/$ZIP_NAME" -d whois_data/
+          fi
+        done
+
+        echo "Combining all .txt files..."
+        cat whois_data/*.txt > whois_data/nrd-7.txt
+        mv whois_data/nrd-7.txt nrd-7.txt
+
+    - name: Commit and push updated file
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add nrd-7.txt
+        git commit -m "Update WHOISDS nrd-7.txt [auto]" || echo "No changes to commit"
+        git push
