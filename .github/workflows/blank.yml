@@ -49,17 +49,18 @@ jobs:
         cat <<EOF > nrd-7.txt
         # Title: NRD-7days
         # Description: Newly registered domains over the past 7 days
-        # Author: chrisjbawden
-        
         # @ GitHub : https://github.com/chrisjbawden/newly-registered-domains
         # Updated: $UPDATED_DATE
         # Domain Count: $DOMAIN_COUNT
         #===============================================================
         
         EOF
+
+        # Convert internationalised domains to punycode for Pi-hole compatibility
+        cat combined_raw.txt | idn --quiet --idna-to-ascii --unicode > cleaned_domains.txt
         
-        # Append domain list
-        cat combined_raw.txt >> nrd-7.txt
+        # Append cleaned domains to the header
+        cat cleaned_domains.txt >> nrd-7.txt
 
     - name: Commit and push updated file
       run: |
