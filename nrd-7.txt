@@ -1,3 +1,12 @@
+# Title: NRD-7days
+# Description: Newly registered domains over the past 7 days
+# Author: chrisjbawden
+
+# @ GitHub : https://github.com/chrisjbawden/newly-registered-domains
+# Updated: 12 Apr 2025
+# Domain Count: 70000
+#===============================================================
+
 app.scot
 callumblake.scot
 grazings.scot
