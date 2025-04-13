@@ -1,5 +1,4 @@
-[https://raw.githubusercontent.com/Zaczero/pihole-phishtank/main/hosts.txt
-](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains/refs/heads/main/nrd-7.txt)
+https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-7.txt
 
 Data sourced from whoisds
 
