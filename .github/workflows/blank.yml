@@ -57,7 +57,7 @@ jobs:
         EOF
 
         # Convert internationalised domains to punycode for Pi-hole compatibility
-        cat combined_raw.txt | idn --quiet --idna-to-ascii --unicode > cleaned_domains.txt
+        cat combined_raw.txt | idn2 --quiet --idna-to-ascii --unicode > cleaned_domains.txt
         
         # Append cleaned domains to the header
         cat cleaned_domains.txt >> nrd-7.txt
