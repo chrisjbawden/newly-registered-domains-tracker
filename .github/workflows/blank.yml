@@ -56,7 +56,7 @@ jobs:
         cat <<EOF > nrd-7.txt
         # Title: NRD-7days
         # Description: Newly registered domains over the past 7 days
-        # @ GitHub : https://github.com/chrisjbawden/newly-registered-domains
+        # @ GitHub : https://github.com/chrisjbawden/newly-registered-domains-tracker
         # Maintainer: Chris Bawden (chrisjbawden)
         # Updated: $UPDATED_DATE
         # Domain Count: $DOMAIN_COUNT
