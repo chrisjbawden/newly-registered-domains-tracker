@@ -30,10 +30,17 @@ jobs:
           URL="https://www.whoisds.com/whois-database/newly-registered-domains/${ENCODED}/nrd"
           
           echo "Downloading $URL"
-          curl -fL "$URL" -o "whois_data/$ZIP_NAME" || echo "Failed to download $ZIP_NAME"
-
-          if [ -f "whois_data/$ZIP_NAME" ]; then
+          curl -s -fL "$URL" -o "whois_data/$ZIP_NAME" || {
+            echo "⚠️ Failed to download $ZIP_NAME"
+            continue
+          }
+        
+          # Validate the file before unzipping
+          if file "whois_data/$ZIP_NAME" | grep -q "Zip archive data"; then
             unzip -o "whois_data/$ZIP_NAME" -d whois_data/
+          else
+            echo "⚠️ Invalid zip file: $ZIP_NAME (skipping)"
+            rm -f "whois_data/$ZIP_NAME"
           fi
         done
 
