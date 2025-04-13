@@ -16,7 +16,7 @@ jobs:
         fetch-depth: 0
 
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y unzip curl idn2
+      run: sudo apt-get update && sudo apt-get install -y unzip curl # idn2
 
     - name: Download and combine WHOISDS data
       run: |
@@ -64,10 +64,11 @@ jobs:
         EOF
 
         # Convert internationalised domains to punycode for Pi-hole compatibility
-        cat combined_raw.txt | idn2 --quiet --idna-to-ascii --unicode > cleaned_domains.txt
+        # cat combined_raw.txt | idn2 --quiet --idna-to-ascii --unicode > cleaned_domains.txt
         
         # Append cleaned domains to the header
-        cat cleaned_domains.txt >> nrd-7.txt
+        # cat cleaned_domains.txt >> nrd-7.txt
+        cat combined_raw.txt >> nrd-7.txt
 
     - name: Commit and push updated file
       run: |
