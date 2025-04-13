@@ -57,6 +57,7 @@ jobs:
         # Title: NRD-7days
         # Description: Newly registered domains over the past 7 days
         # @ GitHub : https://github.com/chrisjbawden/newly-registered-domains
+        # Maintainer: Chris Bawden (chrisjbawden)
         # Updated: $UPDATED_DATE
         # Domain Count: $DOMAIN_COUNT
         #===============================================================
