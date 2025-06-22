@@ -2,8 +2,8 @@ name: Fetch and Commit WHOISDS NRD Data
 
 on:
   schedule:
-    - cron: '0 17 * * *'  # 5:00 PM UTC = 4:00 AM AEST (during DST)
-  workflow_dispatch:  # manual trigger still available
+    - cron: '0 17 * * *'  # 5:00 PM UTC = 4:00 AM AEST
+  workflow_dispatch:
 
 jobs:
   fetch-and-commit:
@@ -12,69 +12,82 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v3
       with:
-        persist-credentials: true  # required for committing
+        persist-credentials: true
         fetch-depth: 0
 
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y unzip curl # idn2
+      run: sudo apt-get update && sudo apt-get install -y unzip curl
 
-    - name: Download and combine WHOISDS data
+    - name: Download WHOISDS data (once for 60 days)
       run: |
         mkdir -p whois_data
         TODAY=$(date -u +%Y-%m-%d)
 
-        for i in {0..6}; do
+        for i in {0..59}; do
           DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
           ZIP_NAME="$DATE.zip"
           ENCODED=$(echo -n "$ZIP_NAME" | base64)
           URL="https://www.whoisds.com/whois-database/newly-registered-domains/${ENCODED}/nrd"
-          
+
           echo "Downloading $URL"
           curl -s -fL "$URL" -o "whois_data/$ZIP_NAME" || {
             echo "⚠️ Failed to download $ZIP_NAME"
             continue
           }
-        
-          # Validate the file before unzipping
+
           if file "whois_data/$ZIP_NAME" | grep -q "Zip archive data"; then
             unzip -o "whois_data/$ZIP_NAME" -d whois_data/
+            # Rename extracted .txt to match the date
+            EXTRACTED=$(unzip -Z1 "whois_data/$ZIP_NAME" | grep -E '\.txt$' || true)
+            if [ -n "$EXTRACTED" ]; then
+              mv "whois_data/$EXTRACTED" "whois_data/$DATE.txt"
+            fi
           else
             echo "⚠️ Invalid zip file: $ZIP_NAME (skipping)"
             rm -f "whois_data/$ZIP_NAME"
           fi
         done
 
-        echo "Combining all .txt files..."
-        # Combine all .txt files
-        cat whois_data/*.txt > combined_raw.txt
-        
-        # Count domains (lines)
-        DOMAIN_COUNT=$(wc -l < combined_raw.txt)
-        UPDATED_DATE=$(date -u +"%d %b %Y")
-        
-        # Create header
-        cat <<EOF > nrd-7.txt
-        # Title: NRD-7days
-        # Description: Newly registered domains over the past 7 days
-        # @ GitHub : https://github.com/chrisjbawden/newly-registered-domains-tracker
-        # Maintainer: Chris Bawden (chrisjbawden)
-        # Updated: $UPDATED_DATE
-        # Domain Count: $DOMAIN_COUNT
-        #===============================================================
-        
-        EOF
+    - name: Generate combined NRD files
+      run: |
+        TODAY=$(date -u +%Y-%m-%d)
+        declare -A RANGES=( ["7"]="nrd-7.txt" ["14"]="nrd-14.txt" ["21"]="nrd-21.txt" ["30"]="nrd-30.txt" ["60"]="nrd-60.txt" )
 
-        # Convert internationalised domains to punycode for Pi-hole compatibility
-        # cat combined_raw.txt | idn2 --quiet --idna-to-ascii --unicode > cleaned_domains.txt
-        
-        # Append cleaned domains to the header
-        # cat cleaned_domains.txt >> nrd-7.txt
-        cat combined_raw.txt >> nrd-7.txt
+        for RANGE in "${!RANGES[@]}"; do
+          OUT_FILE="${RANGES[$RANGE]}"
+          TMP_FILE="combined_${RANGE}.txt"
+          rm -f "$TMP_FILE"
 
-    - name: Commit and push updated file
+          echo "Combining files for last $RANGE days..."
+
+          for (( i=0; i<$RANGE; i++ )); do
+            DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
+            if [ -f "whois_data/$DATE.txt" ]; then
+              cat "whois_data/$DATE.txt" >> "$TMP_FILE"
+            fi
+          done
+
+          DOMAIN_COUNT=$(wc -l < "$TMP_FILE")
+          UPDATED_DATE=$(date -u +"%d %b %Y")
+
+          cat <<EOF > "$OUT_FILE"
+# Title: NRD-${RANGE}days
+# Description: Newly registered domains over the past $RANGE days
+# @ GitHub : https://github.com/chrisjbawden/newly-registered-domains-tracker
+# Maintainer: Chris Bawden (chrisjbawden)
+# Updated: $UPDATED_DATE
+# Domain Count: $DOMAIN_COUNT
+#===============================================================
+
+EOF
+
+          cat "$TMP_FILE" >> "$OUT_FILE"
+        done
+
+    - name: Commit and push updated files
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add nrd-7.txt
-        git commit -m "Update WHOISDS nrd-7.txt [auto]" || echo "No changes to commit"
+        git add nrd-*.txt
+        git commit -m "Update WHOISDS NRD files [auto]" || echo "No changes to commit"
         git push
