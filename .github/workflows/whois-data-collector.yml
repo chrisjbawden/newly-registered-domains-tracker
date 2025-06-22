@@ -23,7 +23,7 @@ jobs:
         mkdir -p whois_data
         TODAY=$(date -u +%Y-%m-%d)
 
-        for i in {0..59}; do
+        for i in $(seq 0 59); do
           DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
           ZIP_NAME="$DATE.zip"
           ENCODED=$(echo -n "$ZIP_NAME" | base64)
@@ -58,11 +58,13 @@ jobs:
 
           echo "Combining files for last $RANGE days..."
 
-          for (( i=0; i<$RANGE; i++ )); do
+          i=0
+          while [ "$i" -lt "$RANGE" ]; do
             DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
             if [ -f "whois_data/$DATE.txt" ]; then
               cat "whois_data/$DATE.txt" >> "$TMP_FILE"
             fi
+            i=$((i+1))
           done
 
           DOMAIN_COUNT=$(wc -l < "$TMP_FILE")
