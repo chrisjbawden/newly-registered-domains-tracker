@@ -7,7 +7,7 @@ This project automatically generates and publishes blocklists based on newly reg
 
 <div style="padding-left: 20%;">
 
-<p style="padding-left 20%;">
+<p>
 <a href="https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-7.txt">nrd-7.txt</a> — domains registered in the last 7 days
 
 <a href="https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-14.txt">nrd-14.txt</a> — last 14 days
