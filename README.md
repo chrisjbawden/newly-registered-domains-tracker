@@ -5,20 +5,12 @@ This project automatically generates and publishes blocklists based on newly reg
 
 📦 Available Lists
 
-<div style="padding-left: 20%;">
 
-<p>
-<a href="https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-7.txt">nrd-7.txt</a> — domains registered in the last 7 days
-
-<a href="https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-14.txt">nrd-14.txt</a> — last 14 days
-
-<a href="https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-21.txt">nrd-21.txt</a> — last 21 days
-
-<a href="https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-30.txt">nrd-30.txt</a> — last 30 days
-
-<a href="https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-60.txt">nrd-60.txt</a> — last 60 days
-</p>
-</div>
+- [nrd-7.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-7.txt) — domains registered in the last 7 days  
+- [nrd-14.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-14.txt) — last 14 days  
+- [nrd-21.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-21.txt) — last 21 days  
+- [nrd-30.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-30.txt) — last 30 days  
+- [nrd-60.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-60.txt) — last 60 days  
 
 ⚠️ Important Notes
 
