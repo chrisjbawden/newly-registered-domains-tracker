@@ -70,16 +70,14 @@ jobs:
           DOMAIN_COUNT=$(wc -l < "$TMP_FILE")
           UPDATED_DATE=$(date -u +"%d %b %Y")
 
-cat <<EOF > "$OUT_FILE"
-# Title: NRD-${RANGE}days
-# Description: Newly registered domains over the past $RANGE days
-# @ GitHub : https://github.com/chrisjbawden/newly-registered-domains-tracker
-# Maintainer: Chris Bawden (chrisjbawden)
-# Updated: $UPDATED_DATE
-# Domain Count: $DOMAIN_COUNT
-#===============================================================
-
-EOF
+          echo "# Title: NRD-${RANGE}days" > "$OUT_FILE"
+          echo "# Description: Newly registered domains over the past $RANGE days" >> "$OUT_FILE"
+          echo "# @ GitHub : https://github.com/chrisjbawden/newly-registered-domains-tracker" >> "$OUT_FILE"
+          echo "# Maintainer: Chris Bawden (chrisjbawden)" >> "$OUT_FILE"
+          echo "# Updated: $UPDATED_DATE" >> "$OUT_FILE"
+          echo "# Domain Count: $DOMAIN_COUNT" >> "$OUT_FILE"
+          echo "#===============================================================" >> "$OUT_FILE"
+          echo "" >> "$OUT_FILE"
 
           cat "$TMP_FILE" >> "$OUT_FILE"
         done
