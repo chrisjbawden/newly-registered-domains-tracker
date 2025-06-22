@@ -10,7 +10,10 @@ This project automatically generates and publishes blocklists based on newly reg
 - [nrd-14.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-14.txt) — last 14 days  
 - [nrd-21.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-21.txt) — last 21 days  
 - [nrd-30.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-30.txt) — last 30 days  
-- [nrd-60.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-60.txt) — last 60 days  
+- [nrd-60.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-60.txt) — last 60 days
+
+
+
 
 ⚠️ Important Notes
 
