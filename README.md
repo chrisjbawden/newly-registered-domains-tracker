@@ -1,7 +1,22 @@
-https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-7.txt
+🧾 Newly Registered Domains Blocklist
+This project automatically generates and publishes blocklists based on newly registered domains, using data sourced from whoisds.com.
 
-Data sourced from whoisds
+📦 Available Lists
+nrd-7.txt — domains registered in the last 7 days
 
-Updated daily at 04:00 (AEST)
+nrd-14.txt — last 14 days
 
-NOTE: The blocklist's primary focus is aggregating data/information, meaning it may not be extreamly accurate or tolerant of false positives. This is a zero-maintenance blocklist - there is no manually adding or removing domains.
+nrd-21.txt — last 21 days
+
+nrd-30.txt — last 30 days
+
+nrd-60.txt — last 60 days
+
+These files are updated daily at 04:00 AEST.
+
+⚠️ Important Notes
+The data is aggregated directly from whoisds.com and may include false positives.
+
+This is a zero-maintenance blocklist — domains are not manually added or removed.
+
+The primary goal is to assist in automation and threat modelling, rather than provide a precision-targeted blocklist.
