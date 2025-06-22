@@ -5,7 +5,7 @@ This project automatically generates and publishes blocklists based on newly reg
 
 📦 Available Lists
 
-<span style="padding-let:10%;">
+<span style="padding-left:20%;">
 
 <a href="https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-7.txt">nrd-7.txt</a> — domains registered in the last 7 days
 
