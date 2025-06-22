@@ -37,7 +37,6 @@ jobs:
 
           if file "whois_data/$ZIP_NAME" | grep -q "Zip archive data"; then
             unzip -o "whois_data/$ZIP_NAME" -d whois_data/
-            # Rename extracted .txt to match the date
             EXTRACTED=$(unzip -Z1 "whois_data/$ZIP_NAME" | grep -E '\.txt$' || true)
             if [ -n "$EXTRACTED" ]; then
               mv "whois_data/$EXTRACTED" "whois_data/$DATE.txt"
@@ -51,10 +50,9 @@ jobs:
     - name: Generate combined NRD files
       run: |
         TODAY=$(date -u +%Y-%m-%d)
-        declare -A RANGES=( ["7"]="nrd-7.txt" ["14"]="nrd-14.txt" ["21"]="nrd-21.txt" ["30"]="nrd-30.txt" ["60"]="nrd-60.txt" )
 
-        for RANGE in "${!RANGES[@]}"; do
-          OUT_FILE="${RANGES[$RANGE]}"
+        for RANGE in 7 14 21 30 60; do
+          OUT_FILE="nrd-${RANGE}.txt"
           TMP_FILE="combined_${RANGE}.txt"
           rm -f "$TMP_FILE"
 
