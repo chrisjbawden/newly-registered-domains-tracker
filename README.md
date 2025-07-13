@@ -6,6 +6,7 @@
 
 This project automatically generates and publishes blocklists based on newly registered domains, using data sourced from whoisds.com.
 
+----
 
 ## 📦 Available Lists
 
@@ -17,8 +18,6 @@ This project automatically generates and publishes blocklists based on newly reg
 - [nrd-60.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-60.txt) — last 60 days
 
 
-<br>
-<br>
 <br>
 
 ----
