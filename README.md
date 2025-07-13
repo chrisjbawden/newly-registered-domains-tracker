@@ -1,9 +1,13 @@
-🧾 Newly Registered Domains Blocklist
+<div align="center">
+
+# 🧾 Newly Registered Domains Blocklist
+
+</div>
 
 This project automatically generates and publishes blocklists based on newly registered domains, using data sourced from whoisds.com.
 
 
-📦 Available Lists
+## 📦 Available Lists
 
 
 - [nrd-7.txt](https://raw.githubusercontent.com/chrisjbawden/newly-registered-domains-tracker/refs/heads/main/nrd-7.txt) — domains registered in the last 7 days  
@@ -17,7 +21,9 @@ This project automatically generates and publishes blocklists based on newly reg
 <br>
 <br>
 
-⚠️ Important Notes
+----
+
+## ⚠️ Important Notes
 
 These files are updated daily at 04:00 AEST.
 
