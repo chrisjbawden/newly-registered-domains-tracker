@@ -2,51 +2,44 @@ name: Auto re-run (full) on failure
 
 on:
   workflow_run:
-    # List the exact workflow display names you want to auto-retry
     workflows:
       - Fetch and Commit WHOISDS NRD Data
     types:
       - completed
 
 permissions:
-  actions: write     # required to call the re-run API
+  actions: write
   contents: read
 
 env:
-  # Maximum total attempts for a single run (original counts as attempt 1).
-  # Example: 2 = allow one automatic full re-run.
+  # Total allowed attempts for a single run (original = 1)
   MAX_ATTEMPTS: "2"
-
-  # Optional delay before triggering the re-run (seconds).
-  # Useful if failures are due to transient infra glitches.
+  # Delay before triggering the re-run (seconds)
   BACKOFF_SECONDS: "360"
 
 jobs:
   rerun-full-on-failure:
-    # Only proceed if the target workflow concluded as failure and we
-    # haven't exceeded the allowed attempts.
-    if: >
-      ${{
-        github.event.workflow_run.conclusion == 'failure' &&
-        github.event.workflow_run.run_attempt < env.MAX_ATTEMPTS
-      }}
+    # Job-level IF cannot use 'env', so only check the failure here.
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Show context
         run: |
-          echo "Target workflow:    ${{ github.event.workflow.name }}"
+          echo "Target workflow:    ${{ github.event.workflow_run.name }}"
           echo "Failed run ID:      ${{ github.event.workflow_run.id }}"
           echo "Attempt number:     ${{ github.event.workflow_run.run_attempt }}"
           echo "Conclusion:         ${{ github.event.workflow_run.conclusion }}"
           echo "Max attempts:       ${MAX_ATTEMPTS}"
           echo "Backoff (seconds):  ${BACKOFF_SECONDS}"
 
+      # Only proceed with backoff + rerun if we are still below MAX_ATTEMPTS
       - name: Optional backoff
-        if: ${{ env.BACKOFF_SECONDS != '0' }}
+        if: ${{ github.event.workflow_run.run_attempt < fromJSON(env.MAX_ATTEMPTS) && env.BACKOFF_SECONDS != '0' }}
         run: sleep "${BACKOFF_SECONDS}"
 
       - name: Re-run entire workflow run via API
+        if: ${{ github.event.workflow_run.run_attempt < fromJSON(env.MAX_ATTEMPTS) }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -59,3 +52,7 @@ jobs:
             });
             core.info(`Triggered full re-run for run ${run_id}.`);
 
+      - name: Skipped because max attempts reached
+        if: ${{ github.event.workflow_run.run_attempt >= fromJSON(env.MAX_ATTEMPTS) }}
+        run: |
+          echo "No auto retry: run_attempt (${{ github.event.workflow_run.run_attempt }}) >= MAX_ATTEMPTS (${MAX_ATTEMPTS})"
