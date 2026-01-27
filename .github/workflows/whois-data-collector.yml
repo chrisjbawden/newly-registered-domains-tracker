@@ -9,83 +9,146 @@ jobs:
   fetch-and-commit:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
-      with:
-        persist-credentials: true
-        fetch-depth: 0
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true
+          fetch-depth: 0
 
-    - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y unzip curl
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip curl
 
-    - name: Download WHOISDS data (once for 60 days)
-      run: |
-        mkdir -p whois_data
-        TODAY=$(date -u +%Y-%m-%d)
+      - name: Download WHOISDS data (once for 60 days)
+        run: |
+          set -euo pipefail
+          mkdir -p whois_data
+          TODAY=$(date -u +%Y-%m-%d)
 
-        for i in $(seq 0 59); do
-          DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
-          ZIP_NAME="$DATE.zip"
-          ENCODED=$(echo -n "$ZIP_NAME" | base64)
-          URL="https://www.whoisds.com/whois-database/newly-registered-domains/${ENCODED}/nrd"
-
-          echo "Downloading $URL"
-          curl -s -fL "$URL" -o "whois_data/$ZIP_NAME" || {
-            echo "⚠️ Failed to download $ZIP_NAME"
-            continue
-          }
-
-          if file "whois_data/$ZIP_NAME" | grep -q "Zip archive data"; then
-            unzip -o "whois_data/$ZIP_NAME" -d whois_data/
-            EXTRACTED=$(unzip -Z1 "whois_data/$ZIP_NAME" | grep -E '\.txt$' || true)
-            if [ -n "$EXTRACTED" ]; then
-              mv "whois_data/$EXTRACTED" "whois_data/$DATE.txt"
-            fi
-          else
-            echo "⚠️ Invalid zip file: $ZIP_NAME (skipping)"
-            rm -f "whois_data/$ZIP_NAME"
-          fi
-        done
-
-    - name: Generate combined NRD files
-      run: |
-        TODAY=$(date -u +%Y-%m-%d)
-
-        for RANGE in 7 14 21 30 60; do
-          OUT_FILE="nrd-${RANGE}.txt"
-          TMP_FILE="combined_${RANGE}.txt"
-          rm -f "$TMP_FILE"
-
-          echo "Combining files for last $RANGE days..."
-
-          i=0
-          while [ "$i" -lt "$RANGE" ]; do
+          for i in $(seq 0 59); do
             DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
-            if [ -f "whois_data/$DATE.txt" ]; then
-              cat "whois_data/$DATE.txt" >> "$TMP_FILE"
+            ZIP_NAME="$DATE.zip"
+            ENCODED=$(echo -n "$ZIP_NAME" | base64)
+            URL="https://www.whoisds.com/whois-database/newly-registered-domains/${ENCODED}/nrd"
+
+            echo "Downloading $URL"
+            curl -s -fL "$URL" -o "whois_data/$ZIP_NAME" || {
+              echo "⚠️ Failed to download $ZIP_NAME"
+              continue
+            }
+
+            if file "whois_data/$ZIP_NAME" | grep -q "Zip archive data"; then
+              unzip -o "whois_data/$ZIP_NAME" -d whois_data/
+              EXTRACTED=$(unzip -Z1 "whois_data/$ZIP_NAME" | grep -E '\.txt$' || true)
+              if [ -n "$EXTRACTED" ]; then
+                mv "whois_data/$EXTRACTED" "whois_data/$DATE.txt"
+              fi
+            else
+              echo "⚠️ Invalid zip file: $ZIP_NAME (skipping)"
+              rm -f "whois_data/$ZIP_NAME"
             fi
-            i=$((i+1))
           done
 
-          DOMAIN_COUNT=$(wc -l < "$TMP_FILE")
+      - name: Generate combined NRD files (txt + Pi-hole + AdGuard)
+        run: |
+          set -euo pipefail
+
+          TODAY=$(date -u +%Y-%m-%d)
           UPDATED_DATE=$(date -u +"%d %b %Y")
 
-          echo "# Title: NRD-${RANGE}days" > "$OUT_FILE"
-          echo "# Description: Newly registered domains over the past $RANGE days" >> "$OUT_FILE"
-          echo "# @ GitHub : https://github.com/chrisjbawden/newly-registered-domains-tracker" >> "$OUT_FILE"
-          echo "# Maintainer: Chris Bawden (chrisjbawden)" >> "$OUT_FILE"
-          echo "# Updated: $UPDATED_DATE" >> "$OUT_FILE"
-          echo "# Domain Count: $DOMAIN_COUNT" >> "$OUT_FILE"
-          echo "#===============================================================" >> "$OUT_FILE"
-          echo "" >> "$OUT_FILE"
+          mkdir -p pihole adguard
 
-          cat "$TMP_FILE" >> "$OUT_FILE"
-        done
+          # Escape a string for safe use inside a regex (for Pi-hole regex list)
+          escape_regex() {
+            printf '%s' "$1" | sed -e 's/[.[\^$()+?{}|\\\-]/\\&/g'
+          }
 
-    - name: Commit and push updated files
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add nrd-*.txt
-        git commit -m "Update WHOISDS NRD files [auto]" || echo "No changes to commit"
-        git push
+          for RANGE in 7 14 21 30 60; do
+            OUT_TXT="nrd-${RANGE}.txt"
+            TMP_RAW="combined_${RANGE}.raw"
+            TMP_DOMAINS="combined_${RANGE}.domains"
+
+            rm -f "$TMP_RAW" "$TMP_DOMAINS"
+
+            echo "Combining files for last $RANGE days..."
+
+            i=0
+            while [ "$i" -lt "$RANGE" ]; do
+              DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
+              if [ -f "whois_data/$DATE.txt" ]; then
+                cat "whois_data/$DATE.txt" >> "$TMP_RAW"
+              fi
+              i=$((i+1))
+            done
+
+            # Normalise + dedupe:
+            # - trim whitespace
+            # - drop blank lines
+            # - drop comment lines
+            # - lower-case
+            # - stable sort unique
+            cat "$TMP_RAW" \
+              | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' \
+              | sed '/^$/d' \
+              | sed '/^[#;]/d' \
+              | tr '[:upper:]' '[:lower:]' \
+              | sort -u > "$TMP_DOMAINS"
+
+            DOMAIN_COUNT=$(wc -l < "$TMP_DOMAINS" | tr -d ' ')
+
+            # 1) Original .txt output (human readable headers + domains)
+            {
+              echo "# Title: NRD-${RANGE}days"
+              echo "# Description: Newly registered domains over the past $RANGE days"
+              echo "# @ GitHub : https://github.com/chrisjbawden/newly-registered-domains-tracker"
+              echo "# Maintainer: Chris Bawden (chrisjbawden)"
+              echo "# Updated: $UPDATED_DATE"
+              echo "# Domain Count: $DOMAIN_COUNT"
+              echo "#==============================================================="
+              echo ""
+              cat "$TMP_DOMAINS"
+            } > "$OUT_TXT"
+
+            # 2) Pi-hole "wildcard" version (regex list)
+            # Matches apex + any subdomain: (^|\.)example\.com$
+            PIHOLE_OUT="pihole/nrd-${RANGE}.pihole"
+            {
+              echo "# Title: NRD-${RANGE}days (Pi-hole regex)"
+              echo "# Description: Regex patterns to block newly registered domains and all subdomains over the past $RANGE days"
+              echo "# Updated: $UPDATED_DATE"
+              echo "# Domain Count: $DOMAIN_COUNT"
+              echo ""
+              while IFS= read -r d; do
+                [ -n "$d" ] || continue
+                ed=$(escape_regex "$d")
+                echo "(^|\\.)${ed}$"
+              done < "$TMP_DOMAINS"
+            } > "$PIHOLE_OUT"
+
+            # 3) AdGuard "wildcard" version (Adblock rules)
+            # Blocks apex + all subdomains: ||example.com^
+            ADGUARD_OUT="adguard/nrd-${RANGE}.adguard"
+            {
+              echo "! Title: NRD-${RANGE}days (AdGuard)"
+              echo "! Description: Adblock rules to block newly registered domains and all subdomains over the past $RANGE days"
+              echo "! Updated: $UPDATED_DATE"
+              echo "! Domain Count: $DOMAIN_COUNT"
+              echo ""
+              while IFS= read -r d; do
+                [ -n "$d" ] || continue
+                echo "||${d}^"
+              done < "$TMP_DOMAINS"
+            } > "$ADGUARD_OUT"
+
+            echo "Wrote: $OUT_TXT, $PIHOLE_OUT, $ADGUARD_OUT"
+          done
+
+      - name: Commit and push updated files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add nrd-*.txt pihole/*.pihole adguard/*.adguard
+
+          git commit -m "Update WHOISDS NRD files [auto]" || echo "No changes to commit"
+          git push
