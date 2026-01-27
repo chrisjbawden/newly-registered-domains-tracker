@@ -18,9 +18,11 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y unzip curl
 
-      - name: Download WHOISDS data (once for 60 days)
+      - name: Download WHOISDS data (once for 60 days) + normalise daily domains
         run: |
           set -euo pipefail
+          export LC_ALL=C
+
           mkdir -p whois_data
           TODAY=$(date -u +%Y-%m-%d)
 
@@ -41,6 +43,18 @@ jobs:
               EXTRACTED=$(unzip -Z1 "whois_data/$ZIP_NAME" | grep -E '\.txt$' || true)
               if [ -n "$EXTRACTED" ]; then
                 mv "whois_data/$EXTRACTED" "whois_data/$DATE.txt"
+
+                # Create a normalised daily domains file (fast, single pass):
+                # - trim whitespace
+                # - drop blank lines + comment lines (# or ;)
+                # - lower-case
+                awk '
+                  {
+                    gsub(/^[ \t\r\n]+|[ \t\r\n]+$/, "", $0)
+                    if ($0 == "" || $0 ~ /^[#;]/) next
+                    print tolower($0)
+                  }
+                ' "whois_data/$DATE.txt" > "whois_data/$DATE.domains"
               fi
             else
               echo "⚠️ Invalid zip file: $ZIP_NAME (skipping)"
@@ -51,51 +65,35 @@ jobs:
       - name: Generate combined NRD files (txt + Pi-hole + AdGuard)
         run: |
           set -euo pipefail
+          export LC_ALL=C
 
           TODAY=$(date -u +%Y-%m-%d)
           UPDATED_DATE=$(date -u +"%d %b %Y")
 
           mkdir -p pihole adguard
 
-          # Escape a string for safe use inside a regex (for Pi-hole regex list)
-          escape_regex() {
-            printf '%s' "$1" | sed -e 's/[.[\^$()+?{}|\\\-]/\\&/g'
-          }
-
           for RANGE in 7 14 21 30 60; do
             OUT_TXT="nrd-${RANGE}.txt"
-            TMP_RAW="combined_${RANGE}.raw"
             TMP_DOMAINS="combined_${RANGE}.domains"
-
-            rm -f "$TMP_RAW" "$TMP_DOMAINS"
 
             echo "Combining files for last $RANGE days..."
 
-            i=0
-            while [ "$i" -lt "$RANGE" ]; do
-              DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
-              if [ -f "whois_data/$DATE.txt" ]; then
-                cat "whois_data/$DATE.txt" >> "$TMP_RAW"
-              fi
-              i=$((i+1))
-            done
-
-            # Normalise + dedupe:
-            # - trim whitespace
-            # - drop blank lines
-            # - drop comment lines
-            # - lower-case
-            # - stable sort unique
-            cat "$TMP_RAW" \
-              | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' \
-              | sed '/^$/d' \
-              | sed '/^[#;]/d' \
-              | tr '[:upper:]' '[:lower:]' \
-              | sort -u > "$TMP_DOMAINS"
+            # Concatenate pre-normalised daily files, then dedupe once per range
+            # (avoid rebuilding and re-normalising huge raw files)
+            {
+              i=0
+              while [ "$i" -lt "$RANGE" ]; do
+                DATE=$(date -u -d "$TODAY - $i days" +%Y-%m-%d)
+                if [ -f "whois_data/$DATE.domains" ]; then
+                  cat "whois_data/$DATE.domains"
+                fi
+                i=$((i+1))
+              done
+            } | sort -u > "$TMP_DOMAINS"
 
             DOMAIN_COUNT=$(wc -l < "$TMP_DOMAINS" | tr -d ' ')
 
-            # 1) Original .txt output (human readable headers + domains)
+            # 1) Original .txt output (headers + plain domains)
             {
               echo "# Title: NRD-${RANGE}days"
               echo "# Description: Newly registered domains over the past $RANGE days"
@@ -108,8 +106,8 @@ jobs:
               cat "$TMP_DOMAINS"
             } > "$OUT_TXT"
 
-            # 2) Pi-hole "wildcard" version (regex list)
-            # Matches apex + any subdomain: (^|\.)example\.com$
+            # 2) Pi-hole regex list (apex + all subdomains)
+            # Converts example.com -> (^|\.)example\.com$
             PIHOLE_OUT="pihole/nrd-${RANGE}.pihole"
             {
               echo "# Title: NRD-${RANGE}days (Pi-hole regex)"
@@ -117,15 +115,18 @@ jobs:
               echo "# Updated: $UPDATED_DATE"
               echo "# Domain Count: $DOMAIN_COUNT"
               echo ""
-              while IFS= read -r d; do
-                [ -n "$d" ] || continue
-                ed=$(escape_regex "$d")
-                echo "(^|\\.)${ed}$"
-              done < "$TMP_DOMAINS"
+              awk '
+                {
+                  d=$0
+                  # Escape regex metacharacters for the domain portion
+                  gsub(/[][(){}.^$+*?|\\-]/, "\\\\&", d)
+                  print "(^|\\\\.)" d "$"
+                }
+              ' "$TMP_DOMAINS"
             } > "$PIHOLE_OUT"
 
-            # 3) AdGuard "wildcard" version (Adblock rules)
-            # Blocks apex + all subdomains: ||example.com^
+            # 3) AdGuard list (Adblock rules, apex + all subdomains)
+            # Converts example.com -> ||example.com^
             ADGUARD_OUT="adguard/nrd-${RANGE}.adguard"
             {
               echo "! Title: NRD-${RANGE}days (AdGuard)"
@@ -133,10 +134,7 @@ jobs:
               echo "! Updated: $UPDATED_DATE"
               echo "! Domain Count: $DOMAIN_COUNT"
               echo ""
-              while IFS= read -r d; do
-                [ -n "$d" ] || continue
-                echo "||${d}^"
-              done < "$TMP_DOMAINS"
+              awk '{ print "||" $0 "^" }' "$TMP_DOMAINS"
             } > "$ADGUARD_OUT"
 
             echo "Wrote: $OUT_TXT, $PIHOLE_OUT, $ADGUARD_OUT"
@@ -148,7 +146,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add nrd-*.txt pihole/*.pihole adguard/*.adguard
+          git add nrd-*.txt pihole/*.pihole adguard/*.adguard whois_data/*.domains
 
           git commit -m "Update WHOISDS NRD files [auto]" || echo "No changes to commit"
           git push
